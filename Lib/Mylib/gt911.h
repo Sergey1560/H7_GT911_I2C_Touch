@@ -4,8 +4,6 @@
 #include "i2c.h"
 
 /*
-Touch example !!!
-GT911_TEST
 TouchPad_ID:9,1,1
 TouchPad_Config_Version:41
 FirmwareVersion:1060
@@ -43,8 +41,6 @@ FirmwareVersion:1060
 
 typedef struct
 {
-	uint8_t Touch;
-	uint8_t TouchpointFlag;
 	uint8_t TouchCount;
  
 	uint8_t Touchkeytrackid[CT_MAX_TOUCH];
@@ -59,6 +55,6 @@ void GT911_RD_Reg(uint16_t reg,uint8_t *buf,uint8_t len);
 void GT911_WR_Reg(uint16_t reg,uint8_t *buf,uint8_t len);
 void gt911_enable_irq(void);
 void GT911_Scan(void);
-void gt911_test(void);
+
 
 #endif

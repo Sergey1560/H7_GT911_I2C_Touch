@@ -8,36 +8,41 @@ void i2c_init(void){
     RCC->APB1LENR |= RCC_APB1LENR_I2C2EN;
 
     I2C2->CR1 = 0;
-    //I2C2->CR1 = (1 << I2C_CR1_DNF_Pos);
-    //I2C2->TIMINGR = 0x307075B1;  
-	I2C2->TIMINGR = 0x20A09DEB;  
+	I2C2->TIMINGR = 0x20A09DEB;   //Значение расчитывается в CubeMX на закладке I2C
     I2C2->CR1 |= I2C_CR1_PE;
 }
 
 
 uint8_t i2c_write_cmd(uint8_t adr,uint16_t cmd){
-   	//Отправка номера регистра
-	//0xBA 8 бит, младший бит - направление чтение-запись, без сдвига на 1, чтобы не считать число
 	I2C2->CR2 = (adr|I2C_CR2_AUTOEND|(2 << I2C_CR2_NBYTES_Pos));
 	I2C2->CR2 |= I2C_CR2_START;
 
 	for(uint8_t i=0; i<2; i++){
-		while(!(I2C2->ISR & I2C_ISR_TXE)){__NOP();};
+		while(!(I2C2->ISR & I2C_ISR_TXE)){
+			if(I2C2->ISR & I2C_ISR_NACKF){
+				return 1;
+			}
+			};
 		I2C2->TXDR = (uint8_t)((cmd >> 8*(1-i)) & 0xFF) ;
 	}
-    //Условие STOP формируется автоматически при наличии I2C_CR2_AUTOEND
+    
+	while(I2C2->ISR & I2C_ISR_BUSY){__NOP();};
+	//Условие STOP формируется автоматически при наличии I2C_CR2_AUTOEND
     return 0;
 }
 
 uint8_t i2c_read(uint8_t adr,uint8_t *data,uint8_t len){
-
 	I2C2->CR2 = (adr)|I2C_CR2_AUTOEND|(len << I2C_CR2_NBYTES_Pos)|I2C_CR2_RD_WRN;
 	I2C2->CR2 |= I2C_CR2_START;
 	for(uint8_t i=0; i<len; i++){
-		while(!(I2C2->ISR & I2C_ISR_RXNE)){__NOP();};
+		while(!(I2C2->ISR & I2C_ISR_RXNE)){
+			if(I2C2->ISR & (I2C_ISR_NACKF)){
+				return 1;
+			}
+			};
 		*data++ = I2C2->RXDR;
 	};
-
+	while(I2C2->ISR & I2C_ISR_BUSY){__NOP();};
     //Условие STOP формируется автоматически при наличии I2C_CR2_AUTOEND
     return 0;
 }
@@ -48,7 +53,11 @@ uint8_t i2c_write(uint8_t adr,uint8_t *data,uint8_t len){
 	I2C2->CR2 |= I2C_CR2_START;
 
 	for(uint8_t i=0; i<len; i++){
-		while(!(I2C2->ISR & I2C_ISR_TXE)){__NOP();};
+		while(!(I2C2->ISR & I2C_ISR_TXE)){
+			if(I2C2->ISR & I2C_ISR_NACKF){
+				return 1;
+			}
+			};
 		I2C2->TXDR = (uint8_t)*data++;
 	}
    return 0;
@@ -63,12 +72,20 @@ uint8_t i2c_write_reg(uint8_t adr,uint16_t reg,uint8_t *data,uint8_t len){
 	I2C2->CR2 |= I2C_CR2_START;
 
 	for(uint8_t i=0; i<2; i++){
-		while(!(I2C2->ISR & I2C_ISR_TXE)){__NOP();};
+		while(!(I2C2->ISR & I2C_ISR_TXE)){
+			if(I2C2->ISR & I2C_ISR_NACKF){
+				return 1;
+			}
+			};
 		I2C2->TXDR = (uint8_t)((reg >> 8*(1-i)) & 0xFF) ;
 	}
 
 	for(uint8_t i=0; i<len; i++){
-		while(!(I2C2->ISR & I2C_ISR_TXE)){__NOP();};
+		while(!(I2C2->ISR & I2C_ISR_TXE)){
+			if(I2C2->ISR & I2C_ISR_NACKF){
+				return 1;
+			}
+			};
 		I2C2->TXDR = (uint8_t)*data++;
 	}
     return 0;

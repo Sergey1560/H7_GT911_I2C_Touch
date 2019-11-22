@@ -1,15 +1,7 @@
 #include "gt911.h"
 
-GT911_Dev Dev_Now,Dev_Backup;
+GT911_Dev Dev_Now;
 
-
-void gt911_test(void){
-
-	while(1){
-		GT911_Scan();
-	}
-
-}
 
 void g911_touch_init(void){
 	uint8_t buf[4];
@@ -18,6 +10,7 @@ void g911_touch_init(void){
 	i2c_init();
 	
 	GT911_RD_Reg(GT911_PRODUCT_ID_REG, (uint8_t *)&buf, 3);
+	GT911_WAIT_200ms;
 	GT911_RD_Reg(GT911_CONFIG_REG, (uint8_t *)&buf[3], 1);
 
 	INFO("TouchPad_ID:%c,%c,%c TouchPad_Config_Version:%2x",buf[0],buf[1],buf[2],buf[3]);
@@ -40,7 +33,9 @@ void GT911_RD_Reg(uint16_t reg,uint8_t *buf,uint8_t len){
 
 
 void GT911_WR_Reg(uint16_t reg,uint8_t *buf,uint8_t len){
-	i2c_write_reg(GT911_I2C_ADDR,reg,buf,len);
+	if(i2c_write_reg(GT911_I2C_ADDR,reg,buf,len)){
+		ERROR("Write REG %0X failed",reg);
+	}
 }
 
 
@@ -52,7 +47,6 @@ void GT911_Scan(void){
 		if ((buf[0]&0x80) == 0x00){
 			GT911_WR_Reg(GT911_READ_XY_REG, (uint8_t *)&Clearbuf, 1);
 		}else{
-			Dev_Now.TouchpointFlag = buf[0];
 			Dev_Now.TouchCount = buf[0]&0x0f;
 			if( (Dev_Now.TouchCount > 5) || (Dev_Now.TouchCount == 0) )
 			{
@@ -177,7 +171,7 @@ PH4 -  I2C
     GPIOB->PUPDR |= GPIO_PUPDR_PUPDR1_0;
 
 
-
+	GT911_WAIT_200ms;
 }
 
 
